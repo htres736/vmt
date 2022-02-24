@@ -213,7 +213,9 @@ const CodePyretOrg = (props) => {
       // prettier-ignore
       let contents = hasSaved ? savedData.data[0].currentState.editorContents : '';
       contents = encodeURIComponent(contents);
-      pyret.setParams(`#warnOnExit=false&editorContents=${contents}`);
+      pyret.setParams(
+        `#headerStyle=small&warnOnExit=false&editorContents=${contents}`
+      );
       // #warnOnExit=false&editorContents=use%20context%20essentials2021%0A%0Ax%20%3D%205%0A%0Ax%0A
       /*
       pyret.postMessage({
@@ -288,7 +290,7 @@ const CodePyretOrg = (props) => {
         onClickCapture={_checkForControl}
         id="containerParent"
         style={{
-          height: '890px', // @TODO this needs to be adjusted based on the editor instance.
+          height: '100%',
         }}
       >
         <div
@@ -298,7 +300,6 @@ const CodePyretOrg = (props) => {
           style={{
             pointerEvents: !_hasControl() ? 'none' : 'auto',
             height: '100%',
-            overflow: 'auto',
           }}
         >
           <iframe
@@ -307,7 +308,6 @@ const CodePyretOrg = (props) => {
             title="pyret"
             src={iframeSrc} // "http://localhost:5000/editor"
           />
-          ;
         </div>
       </div>
     </Fragment>
