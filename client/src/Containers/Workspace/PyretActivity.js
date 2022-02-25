@@ -228,15 +228,6 @@ const CodePyretOrg = (props) => {
       */
     }
     props.setFirstTabLoaded();
-
-    window.tryItOut = function() {
-      const change = {
-        from: { line: 0, ch: 0 },
-        to: { line: 0, ch: 0 },
-        text: ['Startup'],
-      };
-      pyret.postMessage({ type: 'change', change });
-    };
   };
 
   useEffect(() => {
