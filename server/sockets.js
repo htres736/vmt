@@ -215,11 +215,10 @@ module.exports = function() {
 
     socket.on('TAKE_CONTROL', async (data, callback) => {
       socketMetricInc('controltake');
-
       try {
         await Promise.all([
           controllers.messages.post(data),
-          controllers.rooms.put(data.room, { controlledBy: data.user._id }),
+          controllers.tabs.put(data.tab, { controlledBy: data.user._id }),
         ]);
       } catch (err) {
         callback(err, null);
@@ -240,7 +239,7 @@ module.exports = function() {
       socketMetricInc('controlrelease');
 
       controllers.messages.post(data);
-      controllers.rooms.put(data.room, { controlledBy: null });
+      controllers.tabs.put(data.tab, { controlledBy: null });
       socket.to(data.room).emit('RELEASED_CONTROL', data);
       callback(null, {});
     });

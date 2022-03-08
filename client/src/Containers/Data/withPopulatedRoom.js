@@ -5,11 +5,13 @@ import PropTypes from 'prop-types';
 import API from '../../utils/apiRequests';
 import buildLog from '../../utils/buildLog';
 import Loading from '../../Components/Loading/Loading';
+// import { isEqual } from 'lodash';
 
 function withPopulatedRoom(WrappedComponent) {
   class PopulatedRoom extends Component {
     state = {
       loading: true,
+      controlledBy: {},
     };
 
     componentDidMount() {
@@ -22,6 +24,14 @@ function withPopulatedRoom(WrappedComponent) {
             this.populatedRoom.tabs,
             this.populatedRoom.chat
           );
+          this.populatedRoom.settings.controlByTab = false;
+          const controlledBy = this.populatedRoom.tabs.reduce((acc, tab) => {
+            acc[tab._id] = this.populatedRoom.settings.controlByTab
+              ? tab.controlledBy
+              : this.populatedRoom.tabs[0].controlledBy;
+            return acc;
+          }, {});
+          this.setState({ controlledBy });
           if (!this.cancelFetch) this.setState({ loading: false });
         })
         .catch(() => {
@@ -31,35 +41,44 @@ function withPopulatedRoom(WrappedComponent) {
         });
     }
 
+    // componentDidUpdate() {
+    //   if (this.populatedRoom) {
+    //     API.getPopulatedById(
+    //       'rooms',
+    //       this.populatedRoom._id,
+    //       false,
+    //       false
+    //     ).then((res) => {
+    //       const newControlledBy = res.data.result.tabs.reduce((acc, tab) => {
+    //         acc[tab._id] = tab.controlledBy;
+    //         return acc;
+    //       }, {});
+    //       const { controlledBy } = this.state;
+    //       const sameState = isEqual(newControlledBy, controlledBy);
+    //       if (!sameState) {
+    //         this.setState({ controlledBy: newControlledBy });
+    //       }
+    //     });
+    //   }
+    // }
+
     componentWillUnmount() {
       this.cancelFetch = true;
     }
 
-    // For a given tab, returns the userID of who is in control. If tabid is null, returns the person in control of the first tab. If no one in control, returns null.
-    getControlledBy = (tabId) => {
-      if (this.populatedRoom && this.populatedRoom.tabs) {
-        for (const tab of this.populatedRoom.tabs) {
-          if (tab._id === tabId) {
-            console.log(
-              `In 'getControlledBy': ${tab._id} === ${tabId}: ${tab._id ===
-                tabId}`
-            );
-            return tab.controlledBy;
-          }
-        }
-      }
-      return null;
-      //   return this.populatedRoom && this.populatedRoom.controlledBy;
-    };
-
     // sets the userid as the controller of tabId. If userid is null, no one is in control. If tabid is null, sets control for first tab of the room.
     setControlledBy = (tabId, userId) => {
-      console.log(
-        `!!!!!!!In 'setControlledBy': tabId: ${tabId}, userId ${userId}`
-      );
-      this.populatedRoom.controlledBy = userId;
-      // dispatch(updatedRoom(this.populatedRoom._id, { controlledBy: userId }));
-      API.put('rooms', this.populatedRoom._id, { controlledBy: userId });
+      this.setState((prevState) => {
+        const controlledBy = {};
+        Object.keys(prevState.controlledBy).forEach(function(tab) {
+          controlledBy[tab] = userId;
+        });
+        return {
+          controlledBy: this.populatedRoom.settings.controlByTab
+            ? { ...prevState.controlledBy, [tabId]: userId }
+            : controlledBy,
+        };
+      });
     };
 
     releaseControl = (tabId) => {
@@ -68,7 +87,7 @@ function withPopulatedRoom(WrappedComponent) {
 
     render() {
       const { history } = this.props;
-      const { loading } = this.state;
+      const { loading, controlledBy } = this.state;
       if (loading) {
         return <Loading message="Fetching your room..." />;
       }
@@ -77,7 +96,7 @@ function withPopulatedRoom(WrappedComponent) {
         <WrappedComponent
           populatedRoom={this.populatedRoom}
           history={history}
-          getControlledBy={this.getControlledBy}
+          controlledBy={controlledBy}
           setControlledBy={this.setControlledBy}
           releaseControl={this.releaseControl}
         />
