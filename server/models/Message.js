@@ -45,36 +45,14 @@ const Message = new mongoose.Schema({
 Message.pre('save', async function() {
   if (this.isNew) {
     this.timestamp = new Date().getTime();
-    // @TODO CHANGIN controlledBY HERE IS TERRRRIBLLE!!!!! THIS SHOULD ALL BE DONE SOMEWHERE ELSE WHERE ITS LESS OF A SIDE EFFECT
-    if (this.messageType === 'TOOK_CONTROL') {
-      try {
-        await Room.findByIdAndUpdate(this.room, {
-          controlledBy: this.user._id,
-          $addToSet: { chat: this._id },
-        });
-      } catch (err) {
-        console.log('ERROR: ', err);
-      }
-    } else if (
-      this.messageType === 'LEFT_ROOM' ||
-      this.messageType === 'RELEASED_CONTROL'
-    ) {
-      try {
-        await Room.findByIdAndUpdate(this.room, {
-          $addToSet: { chat: this._id },
-        });
-      } catch (err) {
-        console.log(err);
-      }
-    } else {
-      try {
-        await Room.findByIdAndUpdate(this.room, {
-          $addToSet: { chat: this._id },
-        });
-      } catch (err) {
-        console.log(err);
-      }
+    try {
+      await Room.findByIdAndUpdate(this.room, {
+        $addToSet: { chat: this._id },
+      });
+    } catch (err) {
+      console.log(err);
     }
   }
 });
+
 module.exports = mongoose.model('Message', Message);

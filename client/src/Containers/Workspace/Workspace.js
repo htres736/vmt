@@ -34,7 +34,13 @@ import { socket, useSnapshots, API } from '../../utils';
 class Workspace extends Component {
   constructor(props) {
     super(props);
-    const { user, populatedRoom, tempCurrentMembers, temp } = this.props;
+    const {
+      user,
+      populatedRoom,
+      tempCurrentMembers,
+      temp,
+      getControlledBy,
+    } = this.props;
     let myColor = '#f26247'; // default in the case of Temp rooms. @TODO The temp user from the server should be fully formed, with a color and inAdminMode property
     if (populatedRoom.members) {
       try {
@@ -58,7 +64,6 @@ class Workspace extends Component {
       tabs: populatedRoom.tabs || [],
       log: populatedRoom.log || [],
       myColor,
-      controlledBy: populatedRoom.controlledBy,
       activeMember: '',
       currentMembers: temp ? tempCurrentMembers : populatedRoom.currentMembers,
       referencing: false,
@@ -155,21 +160,9 @@ class Workspace extends Component {
   }
 
   componentDidUpdate(prevProps) {
-    // @TODO populatedRoom.controlledBy is ALWAYS null! Should use
-    // controlledBy in the state instead.
-    const { populatedRoom, user, temp, lastMessage } = this.props;
-    if (
-      prevProps.populatedRoom.controlledBy === null &&
-      populatedRoom.controlledBy !== null &&
-      populatedRoom.controlledBy !== user._id
-    ) {
-      //   socket.emit('RELEASE_CONTROL', {user: {_id: this.props.user._id, username: this.props.user.username}, roomId: this.props.room._id}, (err, message) => {
-      //     this.props.updatedRoom(this.props.room._id, {chat: [...this.props.room.chat, message]})
-      //     // this.setState({activeMember: ''})
-      //   })
-    }
+    const { user, temp, lastMessage, getControlledBy } = this.props;
 
-    if (!socket.connected && populatedRoom.controlledBy === user._id) {
+    if (!socket.connected && getControlledBy() === user._id) {
       const auto = true;
       this.toggleControl(null, auto);
     }
@@ -183,11 +176,6 @@ class Workspace extends Component {
     if (prevProps.user.inAdminMode !== user.inAdminMode) {
       this.goBack();
     }
-
-    // this._takeSnapshotIfNeeded(); // likely too CPU intensive and noticible by user.
-
-    // const { takeSnapshot } = this.state;
-    // if (prevProps.controlledBy === user._id) takeSnapshot();
   }
 
   componentWillUnmount() {
@@ -354,32 +342,34 @@ class Workspace extends Component {
     });
 
     socket.on('USER_LEFT', (data) => {
-      let { controlledBy } = this.state;
+      const { releaseControl } = this.props;
       const { currentMembers, message } = data;
       if (data.releasedControl) {
-        controlledBy = null;
+        releaseControl();
       }
-      this.setState({ controlledBy, currentMembers }, () =>
-        connectUpdatedRoom(populatedRoom._id, { controlledBy, currentMembers })
-      );
+      this.setState({ currentMembers }, () => {
+        connectUpdatedRoom(populatedRoom._id, { currentMembers });
+      });
       this.addToLog(message);
     });
 
     socket.on('TOOK_CONTROL', (message) => {
+      const { setControlledBy } = this.props;
       this.addToLog(message);
+      setControlledBy(null, message.user._id);
       this.setState({
         awarenessDesc: message.text,
         awarenessIcon: 'USER',
-        controlledBy: message.user._id,
       });
     });
 
     socket.on('RELEASED_CONTROL', (message) => {
+      const { releaseControl } = this.props;
       this.addToLog(message);
+      releaseControl();
       this.setState({
         awarenessDesc: message.text,
         awarenessIcon: 'USER',
-        controlledBy: null,
       });
     });
 
@@ -499,21 +489,16 @@ class Workspace extends Component {
   };
 
   toggleControl = (event, auto) => {
-    const { populatedRoom, user } = this.props;
-    const { controlledBy } = this.state;
+    const {
+      populatedRoom,
+      user,
+      getControlledBy,
+      setControlledBy,
+      releaseControl,
+    } = this.props;
     const { myColor } = this.state;
-    // if (!user.connected && !auto) {
-    //   // i.e. if the user clicked the button manually instead of controll being toggled programatically
-    //   window.alert(
-    //     'You have disconnected from the server. Check your internet connection and try refreshing the page'
-    //   );
-    // }
-    // console.log(
-    //   'toggling control..., currently controlled by you-',
-    //   controlledBy === user._id
-    // );
 
-    if (controlledBy === user._id) {
+    if (getControlledBy() === user._id) {
       const { takeSnapshot } = this.state;
       takeSnapshot(this._snapshotKey(), this._currentSnapshot());
 
@@ -531,10 +516,10 @@ class Workspace extends Component {
         timestamp: new Date().getTime(),
       };
       this.addToLog(message);
+      releaseControl();
       this.setState({
         awarenessDesc: message.text,
         awarenessIcon: null,
-        controlledBy: null,
       });
       socket.emit('RELEASE_CONTROL', message, (err) => {
         // eslint-disable-next-line no-console
@@ -544,7 +529,7 @@ class Workspace extends Component {
     }
 
     // If room is controlled by someone else
-    else if (controlledBy) {
+    else if (getControlledBy()) {
       const message = {
         _id: mongoIdGenerator(),
         text: 'Can I take control?',
@@ -561,18 +546,10 @@ class Workspace extends Component {
       this.setState({
         showAdminWarning: true,
       });
-      // } else if (!user.connected) {
-      // Let all of the state updates finish and then show an alert
-      // setTimeout(
-      //   () =>
-      //     window.alert(
-      //       'You have disconnected from the server. Check your internet connection and try refreshing the page'
-      //     ),
-      //   0
-      // );
     } else {
       // We're taking control
-      this.setState({ controlledBy: user._id, referencing: false });
+      setControlledBy(null, user._id);
+      this.setState({ referencing: false });
       this.resetControlTimer();
       const message = {
         _id: mongoIdGenerator(),
@@ -923,12 +900,12 @@ class Workspace extends Component {
       connectUpdateRoomTab,
       tempCurrentMembers,
       connectUpdateUserSettings,
+      getControlledBy,
     } = this.props;
     const {
       tabs: currentTabs,
       currentMembers: activeMembers,
       log,
-      controlledBy,
       membersExpanded,
       toolsExpanded,
       instructionsExpanded,
@@ -956,14 +933,14 @@ class Workspace extends Component {
       connectionStatus,
     } = this.state;
     let inControl = 'OTHER';
-    if (controlledBy === user._id) inControl = 'ME';
-    else if (!controlledBy) inControl = 'NONE';
+    if (getControlledBy() === user._id) inControl = 'ME';
+    else if (!getControlledBy()) inControl = 'NONE';
 
     const currentMembers = (
       <CurrentMembers
         members={temp ? tempMembers : populatedRoom.members}
         currentMembers={temp ? tempCurrentMembers : activeMembers}
-        activeMember={controlledBy}
+        activeMember={getControlledBy()}
         expanded={membersExpanded}
         toggleExpansion={this.toggleExpansion}
       />
@@ -1230,6 +1207,9 @@ Workspace.propTypes = {
   connectUpdateRoomTab: PropTypes.func.isRequired,
   connectSetRoomStartingPoint: PropTypes.func.isRequired,
   connectUpdateUserSettings: PropTypes.func.isRequired,
+  getControlledBy: PropTypes.func.isRequired,
+  setControlledBy: PropTypes.func.isRequired,
+  releaseControl: PropTypes.func.isRequired,
 };
 
 Workspace.defaultProps = {
