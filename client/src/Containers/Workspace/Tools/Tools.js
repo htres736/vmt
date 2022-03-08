@@ -63,6 +63,7 @@ const Tools = ({
     //   if (timer.current) clearTimeout(timer.current);
     // };
     if (inControl === 'OTHER-REQUESTED') setControlDisabled(true);
+    else setControlDisabled(false);
   }, [replayer, inControl]);
 
   //   const resetRequested = () => {

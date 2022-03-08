@@ -950,13 +950,13 @@ class Workspace extends Component {
       snapshotRef,
       isCreatingActivity,
       connectionStatus,
-      requestControlTimers,
     } = this.state;
     let inControl = 'OTHER';
     if (controlledBy[currentTabId] === user._id) inControl = 'ME';
     else if (!controlledBy[currentTabId]) inControl = 'NONE';
     // if user has requested control in the current tab...
-    else if (requestControlTimers[currentTabId]) inControl = 'OTHER-REQUESTED';
+    else if (this.requestControlTimers[currentTabId])
+      inControl = 'OTHER-REQUESTED';
 
     const currentMembers = (
       <CurrentMembers
