@@ -1172,6 +1172,7 @@ class Workspace extends Component {
         <Modal show={creatingNewTab} closeModal={this.closeModal}>
           <NewTabForm
             room={populatedRoom}
+            currentTab={currentTabs.find((tab) => tab._id === currentTabId)}
             user={user}
             closeModal={this.closeModal}
             updatedRoom={connectUpdatedRoom}
