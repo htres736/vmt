@@ -34,13 +34,7 @@ import { socket, useSnapshots, API } from '../../utils';
 class Workspace extends Component {
   constructor(props) {
     super(props);
-    const {
-      user,
-      populatedRoom,
-      tempCurrentMembers,
-      temp,
-      getControlledBy,
-    } = this.props;
+    const { user, populatedRoom, tempCurrentMembers, temp } = this.props;
     let myColor = '#f26247'; // default in the case of Temp rooms. @TODO The temp user from the server should be fully formed, with a color and inAdminMode property
     if (populatedRoom.members) {
       try {
