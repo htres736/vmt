@@ -64,6 +64,7 @@ function withPopulatedRoom(WrappedComponent) {
           history={history}
           getControlledBy={this.getControlledBy}
           setControlledBy={this.setControlledBy}
+          releaseControl={this.releaseControl}
         />
       );
     }
