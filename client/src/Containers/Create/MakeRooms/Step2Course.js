@@ -91,7 +91,7 @@ class Step2Course extends Component {
             width="300px"
             change={(event) => setRoomName(event.target.value)}
             value={roomName}
-            title={`e.g. "${roomName} (${dateStamp}): 1"`}
+            title={`e.g. "${roomName}: 1"`}
           />
           {showRevertButton && (
             <i

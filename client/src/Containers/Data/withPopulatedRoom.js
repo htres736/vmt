@@ -24,7 +24,7 @@ function withPopulatedRoom(WrappedComponent) {
             this.populatedRoom.tabs,
             this.populatedRoom.chat
           );
-          this.populatedRoom.settings.controlByTab = false;
+          this.populatedRoom.settings.controlByTab = true;
           const controlledBy = this.populatedRoom.tabs.reduce((acc, tab) => {
             acc[tab._id] = this.populatedRoom.settings.controlByTab
               ? tab.controlledBy
@@ -40,27 +40,6 @@ function withPopulatedRoom(WrappedComponent) {
           );
         });
     }
-
-    // componentDidUpdate() {
-    //   if (this.populatedRoom) {
-    //     API.getPopulatedById(
-    //       'rooms',
-    //       this.populatedRoom._id,
-    //       false,
-    //       false
-    //     ).then((res) => {
-    //       const newControlledBy = res.data.result.tabs.reduce((acc, tab) => {
-    //         acc[tab._id] = tab.controlledBy;
-    //         return acc;
-    //       }, {});
-    //       const { controlledBy } = this.state;
-    //       const sameState = isEqual(newControlledBy, controlledBy);
-    //       if (!sameState) {
-    //         this.setState({ controlledBy: newControlledBy });
-    //       }
-    //     });
-    //   }
-    // }
 
     componentWillUnmount() {
       this.cancelFetch = true;

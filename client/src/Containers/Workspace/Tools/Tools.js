@@ -24,7 +24,7 @@ const Tools = ({
   // or Requested).
   const [controlText, setControlText] = React.useState('Take Control'); // Needs a value, but doesn't matter as it gets set in the useEffect
   const [controlDisabled, setControlDisabled] = React.useState(false);
-  const timer = React.useRef();
+  //   const timer = React.useRef();
 
   // Prevent spamming of the RequestControl button. When that's clicked, disable the button for one minute
   // and change the text to Requested.
@@ -33,10 +33,10 @@ const Tools = ({
     if (controlText === 'Request Control') {
       setControlDisabled(true);
       setControlText('Requested');
-      timer.current = setTimeout(() => {
-        setControlDisabled(false);
-        setControlText(determineControlText(inControl));
-      }, 60000);
+      //   timer.current = setTimeout(() => {
+      //     setControlDisabled(false);
+      //     setControlText(determineControlText(inControl));
+      //   }, 60000);
     }
   };
 
@@ -46,6 +46,8 @@ const Tools = ({
         return 'Release Control';
       case 'NONE':
         return 'Take Control';
+      case 'OTHER-REQUESTED':
+        return 'Requested';
       default:
         return 'Request Control';
     }
@@ -54,18 +56,19 @@ const Tools = ({
   // When the person in control changes, we want to reset the button (i.e., undisable) and adjust the text of the
   // button as appropriate.
   React.useEffect(() => {
-    resetRequested();
+    // resetRequested();
     if (!replayer) setControlText(determineControlText(inControl));
-    return () => {
-      // clear the timer before unmounting
-      if (timer.current) clearTimeout(timer.current);
-    };
+    // return () => {
+    //   // clear the timer before unmounting
+    //   if (timer.current) clearTimeout(timer.current);
+    // };
+    if (inControl === 'OTHER-REQUESTED') setControlDisabled(true);
   }, [replayer, inControl]);
 
-  const resetRequested = () => {
-    if (timer.current) clearTimeout(timer.current);
-    setControlDisabled(false);
-  };
+  //   const resetRequested = () => {
+  //     if (timer.current) clearTimeout(timer.current);
+  //     setControlDisabled(false);
+  //   };
 
   return (
     <div className={classes.Container}>

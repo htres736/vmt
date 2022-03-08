@@ -48,6 +48,8 @@ class Workspace extends Component {
       }
     }
 
+    this.requestControlTimers = {};
+
     this.state = {
       takeSnapshot: () => {},
       cancelSnapshots: () => {},
@@ -170,6 +172,18 @@ class Workspace extends Component {
 
     if (prevProps.user.inAdminMode !== user.inAdminMode) {
       this.goBack();
+    }
+
+    // reset timers where control has changed
+    // compare prevProps
+    if (prevProps.controlledBy[currentTabId] !== controlledBy[currentTabId]) {
+      if (this.requestControlTimers[currentTabId]) {
+        clearTimeout(this.requestControlTimers[currentTabId]);
+      }
+      this.requestControlTimers = {
+        ...this.requestControlTimers,
+        [currentTabId]: null,
+      };
     }
   }
 
@@ -526,7 +540,10 @@ class Workspace extends Component {
     }
 
     // If room is controlled by someone else
-    else if (controlledBy[currentTabId]) {
+    else if (
+      controlledBy[currentTabId] &&
+      !this.requestControlTimers[currentTabId]
+    ) {
       const message = {
         _id: mongoIdGenerator(),
         text: 'Can I take control?',
@@ -540,6 +557,9 @@ class Workspace extends Component {
       socket.emit('SEND_MESSAGE', message, () => {
         this.addToLog(message);
       });
+      this.requestControlTimers[currentTabId] = setTimeout(() => {
+        this.requestControlTimers[currentTabId] = null;
+      }, 60000);
     } else if (user.inAdminMode) {
       this.setState({
         showAdminWarning: true,
@@ -930,10 +950,13 @@ class Workspace extends Component {
       snapshotRef,
       isCreatingActivity,
       connectionStatus,
+      requestControlTimers,
     } = this.state;
     let inControl = 'OTHER';
     if (controlledBy[currentTabId] === user._id) inControl = 'ME';
     else if (!controlledBy[currentTabId]) inControl = 'NONE';
+    // if user has requested control in the current tab...
+    else if (requestControlTimers[currentTabId]) inControl = 'OTHER-REQUESTED';
 
     const currentMembers = (
       <CurrentMembers
