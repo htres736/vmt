@@ -10,8 +10,9 @@ const initialState = {
   instructions: '',
   ggbFile: '',
   desmosLink: '',
-  ggb: true,
+  typeOfTab: true, // changed to include more room types used to be: `ggb: true`
   appName: 'classic',
+  checkedNum: 0,
 };
 
 class NewTabForm extends Component {
@@ -63,7 +64,7 @@ class NewTabForm extends Component {
       setTabs,
       currentTabs,
     } = this.props;
-    const { name, instructions, ggb, desmosLink, appName } = this.state;
+    const { name, instructions, typeOfTab, desmosLink, appName } = this.state;
     if (name.trim().length < 1) {
       this.setState({
         errorMessage: 'Please provide a name for the tab',
@@ -75,7 +76,7 @@ class NewTabForm extends Component {
       desmosLink,
       appName,
       instructions,
-      tabType: ggb ? 'geogebra' : 'desmos',
+      tabType: typeOfTab, //: ggb ? 'geogebra' : 'desmos',
       room: room ? room._id : null,
       activity: activity ? activity._id : null,
     };
@@ -136,10 +137,11 @@ class NewTabForm extends Component {
     const {
       name,
       errorMessage,
-      ggb,
+      typeOfTab, //: ggb,
       // desmosLink,
       // appName,
       instructions,
+      checkedNum,
     } = this.state;
     return (
       <div className={classes.NewTabModal}>
@@ -165,19 +167,27 @@ class NewTabForm extends Component {
           label="Instructions"
         />
         <div className={classes.RadioGroup}>
+          {/* !!!DELETE MEOW!!! checkedNum is used to dynamically set the checked attribute to the selected radio button  */}
           <RadioBtn
             name="geogebra"
-            checked={ggb}
-            check={() => this.setState({ ggb: true })}
+            checked={checkedNum === 0}
+            check={() => this.setState({ tabType: 'geogebra', checkedNum: 0 })}
           >
             GeoGebra
           </RadioBtn>
           <RadioBtn
             name="desmos"
-            checked={!ggb}
-            check={() => this.setState({ ggb: false })}
+            checked={checkedNum === 1}
+            check={() => this.setState({ tabType: 'desmos', checkedNum: 1 })}
           >
             Desmos
+          </RadioBtn>
+          <RadioBtn
+            name="clone"
+            checked={checkedNum === 2}
+            check={() => this.setState({ tabType: 'clone', checkedNum: 2})} 
+          >
+            Clone This Room
           </RadioBtn>
         </div>
         {/* <RoomOpts
