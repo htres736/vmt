@@ -155,8 +155,9 @@ class Workspace extends Component {
 
   componentDidUpdate(prevProps) {
     const { user, temp, lastMessage, getControlledBy } = this.props;
+    const { currentTabId } = this.state;
 
-    if (!socket.connected && getControlledBy() === user._id) {
+    if (!socket.connected && getControlledBy(currentTabId) === user._id) {
       const auto = true;
       this.toggleControl(null, auto);
     }
@@ -337,9 +338,10 @@ class Workspace extends Component {
 
     socket.on('USER_LEFT', (data) => {
       const { releaseControl } = this.props;
+      const { currentTabId } = this.state;
       const { currentMembers, message } = data;
       if (data.releasedControl) {
-        releaseControl();
+        releaseControl(currentTabId);
       }
       this.setState({ currentMembers }, () => {
         connectUpdatedRoom(populatedRoom._id, { currentMembers });
@@ -349,8 +351,9 @@ class Workspace extends Component {
 
     socket.on('TOOK_CONTROL', (message) => {
       const { setControlledBy } = this.props;
+      const { currentTabId } = this.state;
       this.addToLog(message);
-      setControlledBy(null, message.user._id);
+      setControlledBy(currentTabId, message.user._id);
       this.setState({
         awarenessDesc: message.text,
         awarenessIcon: 'USER',
@@ -359,8 +362,9 @@ class Workspace extends Component {
 
     socket.on('RELEASED_CONTROL', (message) => {
       const { releaseControl } = this.props;
+      const { currentTabId } = this.state;
       this.addToLog(message);
-      releaseControl();
+      releaseControl(currentTabId);
       this.setState({
         awarenessDesc: message.text,
         awarenessIcon: 'USER',
@@ -490,9 +494,9 @@ class Workspace extends Component {
       setControlledBy,
       releaseControl,
     } = this.props;
-    const { myColor } = this.state;
+    const { myColor, currentTabId } = this.state;
 
-    if (getControlledBy() === user._id) {
+    if (getControlledBy(currentTabId) === user._id) {
       const { takeSnapshot } = this.state;
       takeSnapshot(this._snapshotKey(), this._currentSnapshot());
 
@@ -510,7 +514,7 @@ class Workspace extends Component {
         timestamp: new Date().getTime(),
       };
       this.addToLog(message);
-      releaseControl();
+      releaseControl(currentTabId);
       this.setState({
         awarenessDesc: message.text,
         awarenessIcon: null,
@@ -523,7 +527,7 @@ class Workspace extends Component {
     }
 
     // If room is controlled by someone else
-    else if (getControlledBy()) {
+    else if (getControlledBy(currentTabId)) {
       const message = {
         _id: mongoIdGenerator(),
         text: 'Can I take control?',
@@ -542,7 +546,7 @@ class Workspace extends Component {
       });
     } else {
       // We're taking control
-      setControlledBy(null, user._id);
+      setControlledBy(currentTabId, user._id);
       this.setState({ referencing: false });
       this.resetControlTimer();
       const message = {
@@ -927,14 +931,14 @@ class Workspace extends Component {
       connectionStatus,
     } = this.state;
     let inControl = 'OTHER';
-    if (getControlledBy() === user._id) inControl = 'ME';
-    else if (!getControlledBy()) inControl = 'NONE';
+    if (getControlledBy(currentTabId) === user._id) inControl = 'ME';
+    else if (!getControlledBy(currentTabId)) inControl = 'NONE';
 
     const currentMembers = (
       <CurrentMembers
         members={temp ? tempMembers : populatedRoom.members}
         currentMembers={temp ? tempCurrentMembers : activeMembers}
-        activeMember={getControlledBy()}
+        activeMember={getControlledBy(currentTabId)}
         expanded={membersExpanded}
         toggleExpansion={this.toggleExpansion}
       />

@@ -37,11 +37,26 @@ function withPopulatedRoom(WrappedComponent) {
 
     // For a given tab, returns the userID of who is in control. If tabid is null, returns the person in control of the first tab. If no one in control, returns null.
     getControlledBy = (tabId) => {
-      return this.populatedRoom && this.populatedRoom.controlledBy;
+      if (this.populatedRoom && this.populatedRoom.tabs) {
+        for (const tab of this.populatedRoom.tabs) {
+          if (tab._id === tabId) {
+            console.log(
+              `In 'getControlledBy': ${tab._id} === ${tabId}: ${tab._id ===
+                tabId}`
+            );
+            return tab.controlledBy;
+          }
+        }
+      }
+      return null;
+      //   return this.populatedRoom && this.populatedRoom.controlledBy;
     };
 
     // sets the userid as the controller of tabId. If userid is null, no one is in control. If tabid is null, sets control for first tab of the room.
     setControlledBy = (tabId, userId) => {
+      console.log(
+        `!!!!!!!In 'setControlledBy': tabId: ${tabId}, userId ${userId}`
+      );
       this.populatedRoom.controlledBy = userId;
       // dispatch(updatedRoom(this.populatedRoom._id, { controlledBy: userId }));
       API.put('rooms', this.populatedRoom._id, { controlledBy: userId });
