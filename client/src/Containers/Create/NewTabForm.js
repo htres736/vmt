@@ -84,7 +84,7 @@ class NewTabForm extends Component {
       const dbTab = response.data.result;
       const newTab = {
         name,
-        desmosLink,
+        desmosLink: tabType === constants.CLONE ? dbTab.desmosLink : '',
         appName,
         instructions,
         tabType: tabType === constants.CLONE ? currentTab.tabType : tabType,
