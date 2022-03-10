@@ -204,16 +204,16 @@ export const createRoomFromActivity = (
 
 export const updateRoom = (id, body) => {
   return (dispatch, getState) => {
-    const room = { ...getState().rooms.byId[id] };
     if (body.isTrashed) {
       dispatch(removeUserRooms([id]));
       dispatch(roomsRemoved([id]));
     } else {
-      dispatch(updatedRoom(id, body)); // Optimistically update the UI
+      dispatch(updatedRoom(id, body)); // Optimistically update the UI      
     }
     API.put('rooms', id, body)
-      .then()
-      .catch(() => {
+    .then()
+    .catch(() => {
+        const room = { ...getState().rooms.byId[id] };
         if (body.isTrashed) {
           dispatch(addUserRooms([id]));
           dispatch(createdRoom(room));

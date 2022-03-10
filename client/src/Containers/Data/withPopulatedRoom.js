@@ -1,5 +1,6 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
+import { socket } from 'utils';
 // import { dispatch } from 'redux';
 // import { updatedRoom } from 'store/actions';
 import API from '../../utils/apiRequests';
@@ -24,7 +25,7 @@ function withPopulatedRoom(WrappedComponent) {
             this.populatedRoom.tabs,
             this.populatedRoom.chat
           );
-          this.populatedRoom.settings.controlByTab = true;
+          // this.populatedRoom.settings.controlByTab = true;
           const controlledBy = this.populatedRoom.tabs.reduce((acc, tab) => {
             acc[tab._id] = this.populatedRoom.settings.controlByTab
               ? tab.controlledBy
@@ -39,6 +40,10 @@ function withPopulatedRoom(WrappedComponent) {
             'we should probably just go back to the previous page? maybe display the error'
           );
         });
+
+        socket.on('RECEIVED_UPDATED_ROOM_SETTINGS', (updatedSettings) => {
+          this.populatedRoom.settings = updatedSettings;
+        })
     }
 
     componentWillUnmount() {

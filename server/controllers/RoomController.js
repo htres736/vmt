@@ -48,7 +48,7 @@ module.exports = {
         //   populate: { path: params.events ? 'events' : '' },
         // })
         .populate({ path: 'graphImage', select: 'imageData' })
-        .select('name creator members course graphImage privacySetting _id')
+        .select('name creator members course graphImage privacySetting _id settings')
         .then((room) => {
           resolve(room);
         })

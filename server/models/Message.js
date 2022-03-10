@@ -33,6 +33,7 @@ const Message = new mongoose.Schema({
       'SWITCH_TAB',
       'NEW_TAB',
       'JOINED_ROOM',
+      'UPDATED_ROOM_SETTINGS',
     ],
     default: 'TEXT',
   },

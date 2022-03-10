@@ -1,12 +1,11 @@
 import React, { Component } from 'react';
 import PropTypes from 'prop-types';
 import { RadioBtn, Button } from '../../../Components';
-import { Loading } from '../../../Components';
+import { socket } from 'utils';
 import classes from './roomSettings.css';
 
 class RoomSettings extends Component {
   state = {
-    loading: true,
     createTabsState: this.props.settings.participantsCanCreateTabs,
     controlTabsState: this.props.settings.controlByTab,
   }
@@ -30,6 +29,13 @@ class RoomSettings extends Component {
     updatedSettings.controlByTab = controlTabsState;
     updatedSettings.participantsCanCreateTabs = createTabsState;
     updateRoom(roomId, { settings: updatedSettings });
+    // send a sockets message to room participants about updated change
+    socket.emit('UPDATE_ROOM_SETTINGS', roomId, (res, err) => {
+      if (err) {
+        console.log(err);
+        return;
+      }
+    })
   }
 
   // togglePerspective = () => {
@@ -40,21 +46,9 @@ class RoomSettings extends Component {
   //   updateRoom(roomId, { settings: updatedSettings });
   // };
 
-  // toggleTabControl = () => {
-  //   const { roomId, settings, updateRoom } = this.props;
-  //   const updatedSettings = { ...settings };
-  //   updatedSettings.controlByTab = !settings.controlByTab;
-  //   updateRoom(roomId, { settings: updatedSettings });
-
-  // }
-
   render() {
-    const { createTabsState, controlTabsState, loading } = this.state;
+    const { createTabsState, controlTabsState, } = this.state;
     const { settings, owner } = this.props;
-
-    // if (loading) {
-    //   return <Loading message="Configuring your settings..." />
-    // }
 
     return owner ? (
       <div className={classes.SettingsContainer}>
@@ -97,6 +91,7 @@ class RoomSettings extends Component {
           <Button click={this.submit}>
             Update Room Settings
           </Button>
+          <p>Make a state variable message that appears for a time to let the user know the settings changed</p>
         </div>
 
         {/* Ggb perspective option set to disabled for now */}

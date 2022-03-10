@@ -80,6 +80,9 @@ const socketMetricInc = (type) => {
   if (type === 'refupdated') {
     refUpdateCount.inc();
   }
+  if (type === 'updateRoomSettings') {
+    updateRoomSettings.inc();
+  }
 };
 
 const disconnectCount = new client.Counter({
@@ -158,6 +161,12 @@ const refUpdateCount = new client.Counter({
   name: 'socket_refUpdate',
   help: 'number of reference update events',
 });
+
+const updateRoomSettings = new client.Counter({
+  name: 'socket_roomSettingsUpdate',
+  help: 'number of room settings update events',
+})
+
 register.registerMetric(refUpdateCount);
 
 router.get('/', async (req, res) => {
