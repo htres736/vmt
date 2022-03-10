@@ -30,7 +30,7 @@ class RoomSettings extends Component {
     updatedSettings.participantsCanCreateTabs = createTabsState;
     updateRoom(roomId, { settings: updatedSettings });
     // send a sockets message to room participants about updated change
-    socket.emit('UPDATE_ROOM_SETTINGS', roomId, (res, err) => {
+    socket.emit('UPDATE_ROOM_SETTINGS', {roomId, updatedSettings}, (res, err) => {
       if (err) {
         console.log(err);
         return;

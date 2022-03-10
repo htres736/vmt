@@ -13,6 +13,7 @@ function withPopulatedRoom(WrappedComponent) {
     state = {
       loading: true,
       controlledBy: {},
+      populatedRoom: {},
     };
 
     componentDidMount() {
@@ -32,7 +33,7 @@ function withPopulatedRoom(WrappedComponent) {
               : this.populatedRoom.tabs[0].controlledBy;
             return acc;
           }, {});
-          this.setState({ controlledBy });
+          this.setState({ controlledBy, populatedRoom: this.populatedRoom });
           if (!this.cancelFetch) this.setState({ loading: false });
         })
         .catch(() => {
@@ -41,24 +42,25 @@ function withPopulatedRoom(WrappedComponent) {
           );
         });
 
-        socket.on('RECEIVED_UPDATED_ROOM_SETTINGS', (updatedSettings) => {
-          this.populatedRoom.settings = updatedSettings;
-        })
+      socket.on('RECEIVED_UPDATED_ROOM_SETTINGS', (updatedSettings) => {
+        this.setState(prevState => ({ populatedRoom: { ...prevState.populatedRoom, settings: updatedSettings } }))
+      })
     }
 
     componentWillUnmount() {
       this.cancelFetch = true;
+      socket.removeAllListeners('RECEIVED_UPDATED_ROOM_SETTINGS');
     }
 
     // sets the userid as the controller of tabId. If userid is null, no one is in control. If tabid is null, sets control for first tab of the room.
     setControlledBy = (tabId, userId) => {
       this.setState((prevState) => {
         const controlledBy = {};
-        Object.keys(prevState.controlledBy).forEach(function(tab) {
+        Object.keys(prevState.controlledBy).forEach(function (tab) {
           controlledBy[tab] = userId;
         });
         return {
-          controlledBy: this.populatedRoom.settings.controlByTab
+          controlledBy: prevState.populatedRoom.settings.controlByTab
             ? { ...prevState.controlledBy, [tabId]: userId }
             : controlledBy,
         };
@@ -71,14 +73,14 @@ function withPopulatedRoom(WrappedComponent) {
 
     render() {
       const { history } = this.props;
-      const { loading, controlledBy } = this.state;
+      const { loading, controlledBy, populatedRoom } = this.state;
       if (loading) {
         return <Loading message="Fetching your room..." />;
       }
 
       return (
         <WrappedComponent
-          populatedRoom={this.populatedRoom}
+          populatedRoom={populatedRoom}
           history={history}
           controlledBy={controlledBy}
           setControlledBy={this.setControlledBy}
