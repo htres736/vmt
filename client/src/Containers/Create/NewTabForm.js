@@ -73,7 +73,7 @@ class NewTabForm extends Component {
       currentTabs,
       currentTab,
     } = this.props;
-    const { name, instructions, tabType, desmosLink, appName } = this.state;
+    const { name, instructions, tabType, appName } = this.state;
     if (name.trim().length < 1) {
       this.setState({
         errorMessage: 'Please provide a name for the tab',
