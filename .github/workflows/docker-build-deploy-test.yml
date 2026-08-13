@@ -15,6 +15,9 @@ env:
   STACK_DIR: /mtdocker
   STACK_FILE: docker-compose-mt-apps-test.yml
   SERVICE: vmt
+  RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+  # via env, not secrets, so the notify steps can test it in their `if`
+  SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
 
@@ -23,6 +26,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
+    - name: Notify Slack - build started
+      if: ${{ env.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      run: |
+        curl -sSf -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"Build Started - ${{ github.workflow }} #${{ github.run_number }} (<${{ env.RUN_URL }}|Open>)\"}" \
+          "$SLACK_WEBHOOK_URL"
 
     - name: Checkout the Repo
       uses: actions/checkout@v4
@@ -66,7 +77,12 @@ jobs:
           # cached image rather than letting it keep the old digest.
           docker service rm ${{ env.STACK_NAME }}_${{ env.SERVICE }} || true
           docker stack deploy --compose-file ${{ env.STACK_FILE }} ${{ env.STACK_NAME }}
-          sleep 10
+          # wait for the new task to actually converge before nudging prom
+          timeout 300 bash -c '
+            until [ "$(docker service ls --filter name=${{ env.STACK_NAME }}_${{ env.SERVICE }} --format "{{.Replicas}}")" = "1/1" ]; do
+              sleep 5
+            done
+          '
           # prom can miss a recreated service; traefik re-discovers on its own
           docker service update --force monitoring_prom
         EOF
@@ -74,3 +90,19 @@ jobs:
     - name: Cleanup
       if: always()
       run: rm -rf ~/.ssh
+
+    - name: Notify Slack - success
+      if: ${{ success() && env.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      run: |
+        curl -sSf -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"Build deployed successfully - ${{ github.workflow }} #${{ github.run_number }} (<${{ env.RUN_URL }}|Open>)\"}" \
+          "$SLACK_WEBHOOK_URL"
+
+    - name: Notify Slack - failure
+      if: ${{ failure() && env.SLACK_WEBHOOK_URL != '' }}
+      continue-on-error: true
+      run: |
+        curl -sSf -X POST -H 'Content-type: application/json' \
+          --data "{\"text\":\"Build failed - ${{ github.workflow }} #${{ github.run_number }} (<${{ env.RUN_URL }}|Open>)\"}" \
+          "$SLACK_WEBHOOK_URL"
