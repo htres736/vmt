@@ -16,7 +16,7 @@ env:
   STACK_FILE: docker-compose-mt-apps-test.yml
   SERVICE: vmt
   RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-  # via env, not secrets, so the notify steps can test it in their `if`
+  # via env: secrets aren't available in step-level `if`
   SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
 
 jobs:
@@ -59,32 +59,57 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-    # Deploy to the mt-test swarm host. Assumes /mtdocker is already provisioned
-    # with the stack file, traefik.yml and the .env-* files.
     - name: Set up SSH key
       run: |
         install -m 600 -D /dev/null ~/.ssh/id_rsa
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.VM_HOST }} > ~/.ssh/known_hosts
 
+    # Updates only the vmt service; /mtdocker is assumed already provisioned.
     - name: Deploy to mt-test
       run: |
-        ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -euo pipefail << 'EOF'
+        timeout 900 ssh \
+          -o BatchMode=yes \
+          -o ConnectTimeout=15 \
+          -o ServerAliveInterval=30 \
+          -o ServerAliveCountMax=10 \
+          ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} bash -euo pipefail << 'EOF'
           cd ${{ env.STACK_DIR }}
           docker login -u '${{ secrets.DOCKER_USERNAME }}' -p '${{ secrets.DOCKER_PASSWORD }}'
-          docker pull ${{ env.REGISTRY_IMAGE }}:dev-latest
-          # dev-latest is a moving tag, so remove the service to force swarm off the
-          # cached image rather than letting it keep the old digest.
-          docker service rm ${{ env.STACK_NAME }}_${{ env.SERVICE }} || true
-          docker stack deploy --compose-file ${{ env.STACK_FILE }} ${{ env.STACK_NAME }}
-          # wait for the new task to actually converge before nudging prom
-          timeout 300 bash -c '
-            until [ "$(docker service ls --filter name=${{ env.STACK_NAME }}_${{ env.SERVICE }} --format "{{.Replicas}}")" = "1/1" ]; do
-              sleep 5
-            done
-          '
+
+          # Immutable per-run tag, so the update is a real spec change.
+          IMAGE='${{ env.REGISTRY_IMAGE }}:dev-build-${{ github.run_number }}'
+          SVC='${{ env.STACK_NAME }}_${{ env.SERVICE }}'
+          docker pull "$IMAGE"
+
+          if docker service inspect "$SVC" >/dev/null 2>&1; then
+            docker service update --detach=true --image "$IMAGE" "$SVC"
+          else
+            # First run, or a previous run died mid-deploy.
+            echo "$SVC not found — bootstrapping via stack deploy"
+            docker stack deploy --detach=true --resolve-image=changed \
+              --compose-file ${{ env.STACK_FILE }} ${{ env.STACK_NAME }}
+          fi
+
+          # Exact service name; replica count read from the spec, never hardcoded.
+          # The per-iteration echo also keeps the ssh channel from idling out.
+          want=$(docker service inspect "$SVC" --format '{{.Spec.Mode.Replicated.Replicas}}')
+          deadline=$((SECONDS + 300))
+          while :; do
+            ok=$(docker service ps "$SVC" --filter desired-state=running \
+                   --format '{{.CurrentState}}' | grep -c '^Running' || true)
+            echo "[$(date -u +%H:%M:%S)] $SVC $ok/$want running"
+            [ "$ok" -ge "$want" ] && break
+            if [ "$SECONDS" -ge "$deadline" ]; then
+              echo "converge timeout — task history follows"
+              docker service ps --no-trunc "$SVC"
+              exit 1
+            fi
+            sleep 10
+          done
+
           # prom can miss a recreated service; traefik re-discovers on its own
-          docker service update --force monitoring_prom
+          docker service update --detach=true --force monitoring_prom
         EOF
 
     - name: Cleanup
