@@ -48,6 +48,7 @@ jobs:
         password: ${{ secrets.DOCKER_PASSWORD }}
 
     - name: Build and push Docker image
+      id: build
       uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671
       with:
         context: .
@@ -77,8 +78,9 @@ jobs:
           cd ${{ env.STACK_DIR }}
           docker login -u '${{ secrets.DOCKER_USERNAME }}' -p '${{ secrets.DOCKER_PASSWORD }}'
 
-          # Immutable per-run tag, so the update is a real spec change.
-          IMAGE='${{ env.REGISTRY_IMAGE }}:dev-build-${{ github.run_number }}'
+          # Digest-pinned so the update is a real spec change; keeps the live spec
+          # matching the dev-latest tag the stack file declares.
+          IMAGE='${{ env.REGISTRY_IMAGE }}:dev-latest@${{ steps.build.outputs.digest }}'
           SVC='${{ env.STACK_NAME }}_${{ env.SERVICE }}'
           docker pull "$IMAGE"
 
